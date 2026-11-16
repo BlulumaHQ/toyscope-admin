@@ -106,7 +106,7 @@ function SignIn() {
     e.preventDefault(); setBusy(true);
     const { error } = await sb().auth.signInWithOtp({ email: email.trim(), options: { shouldCreateUser: false } });
     setBusy(false);
-    if (error) return toast.error(error.message);
+    if (error) { toast.error(error.message); return; }
     setSent(true); toast.success("Code sent. Check your inbox.");
   };
   const verify = async (e: React.FormEvent) => {
