@@ -145,14 +145,37 @@ function Members() {
       </div>
       {list.error ? <ErrorBox error={list.error} /> : list.isLoading ? (
         <div className="space-y-2">{Array.from({ length: 6 }).map((_, i) => <Skel key={i} className="h-14" />)}</div>
-      ) : !list.data?.length ? <Empty>No members match.</Empty> : (
+      ) : !rows.length ? <Empty>No members match.</Empty> : (
         <div className="card overflow-x-auto">
           <table className="w-full min-w-[1000px] text-sm">
             <thead className="border-b text-left text-xs uppercase tracking-wide text-muted-foreground">
-              <tr>{["Member", "Founder #", "Plan", "Sign-in", "Age", "Toys", "Scans today", "Joined", "Status"].map((h) => <th key={h} className="px-4 py-3 font-semibold">{h}</th>)}</tr>
+              <tr>
+                {([
+                  ["Member", "first", "asc"],
+                  ["Founder #", "founder", "asc"],
+                  ["Plan", null, null],
+                  ["Sign-in", null, null],
+                  ["Age", "age", "asc"],
+                  ["Toys", "toys", "desc"],
+                  ["Scans today", "scans", "desc"],
+                  ["Joined", "joined", "desc"],
+                  ["Status", null, null],
+                ] as [string, SortKey | null, "asc" | "desc" | null][]).map(([h, key, def]) => (
+                  <th key={h} className="px-4 py-3 font-semibold">
+                    {key ? (
+                      <button type="button" onClick={() => toggleSort(key, def!)}
+                        className="inline-flex min-h-11 items-center gap-1 uppercase tracking-wide hover:text-foreground"
+                        aria-label={`Sort by ${h}`}>
+                        {h}
+                        {sort.key === key && (sort.dir === "asc" ? <ArrowUp className="size-3" /> : <ArrowDown className="size-3" />)}
+                      </button>
+                    ) : h}
+                  </th>
+                ))}
+              </tr>
             </thead>
             <tbody className="divide-y">
-              {list.data.map((m) => (
+              {rows.map((m) => (
                 <tr key={m.id} tabIndex={0} className="cursor-pointer hover:bg-muted focus:bg-muted focus:outline-none"
                   onClick={() => nav({ to: "/members/$id", params: { id: m.id } })}
                   onKeyDown={(e) => e.key === "Enter" && nav({ to: "/members/$id", params: { id: m.id } })}>
