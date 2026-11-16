@@ -103,12 +103,18 @@ function Members() {
   const [q, setQ] = useState("");
   const [dq, setDq] = useState("");
   const [plan, setPlan] = useState("all");
+  const [sort, setSort] = useState<Sort>(loadSort);
   const nav = useNavigate();
   useEffect(() => { const t = setTimeout(() => setDq(q.trim()), 300); return () => clearTimeout(t); }, [q]);
+  useEffect(() => { try { localStorage.setItem(SORT_KEY, JSON.stringify(sort)); } catch { /* ignore */ } }, [sort]);
   const list = useQuery({ queryKey: ["members", dq, plan], queryFn: () => rpc<Member[]>("admin_members", { p_q: dq, p_plan: plan }) });
 
+  const rows = sortMembers(list.data ?? [], sort);
+  const toggleSort = (key: SortKey, defaultDir: "asc" | "desc") =>
+    setSort((s) => (s.key === key ? { key, dir: s.dir === "asc" ? "desc" : "asc" } : { key, dir: defaultDir }));
+
   const exportCsv = () => {
-    const blob = new Blob([toCsv(list.data ?? [])], { type: "text/csv" });
+    const blob = new Blob([toCsv(rows)], { type: "text/csv" });
     const a = document.createElement("a"); a.href = URL.createObjectURL(blob);
     a.download = `toyscope-members-${new Date().toISOString().slice(0, 10)}.csv`; a.click();
   };
@@ -127,6 +133,13 @@ function Members() {
           <label htmlFor="mp" className="sr-only">Plan filter</label>
           <select id="mp" className="field capitalize" value={plan} onChange={(e) => setPlan(e.target.value)}>
             {PLANS.map((p) => <option key={p} value={p}>{p === "all" ? "All plans" : p}</option>)}
+          </select>
+        </div>
+        <div className="sm:w-56">
+          <label htmlFor="ms" className="sr-only">Sort by</label>
+          <select id="ms" className="field" value={`${sort.key}:${sort.dir}`}
+            onChange={(e) => { const o = SORT_OPTIONS.find((o) => o.value === e.target.value); if (o) setSort({ key: o.key, dir: o.dir }); }}>
+            {SORT_OPTIONS.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
           </select>
         </div>
       </div>
