@@ -54,14 +54,14 @@ function sortMembers(rows: Member[], sort: Sort): Member[] {
         return (a.founder_no! - b.founder_no!) * mul;
       }
       case "first": {
-        const an = !a.name?.trim(), bn = !b.name?.trim();
-        if (an || bn) return an === bn ? 0 : an ? 1 : -1;
-        return collator.compare(a.name.trim(), b.name.trim()) * mul;
+        const an = a.name?.trim() ?? "", bn = b.name?.trim() ?? "";
+        if (!an || !bn) return !an === !bn ? 0 : !an ? 1 : -1;
+        return collator.compare(an, bn) * mul;
       }
       case "last": {
-        const an = !a.name?.trim(), bn = !b.name?.trim();
-        if (an || bn) return an === bn ? 0 : an ? 1 : -1;
-        return collator.compare(lastWord(a.name), lastWord(b.name)) * mul;
+        const an = a.name?.trim() ?? "", bn = b.name?.trim() ?? "";
+        if (!an || !bn) return !an === !bn ? 0 : !an ? 1 : -1;
+        return collator.compare(lastWord(an), lastWord(bn)) * mul;
       }
       case "handle":
         return collator.compare(a.handle ?? "", b.handle ?? "") * mul;
