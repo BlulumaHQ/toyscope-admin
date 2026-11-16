@@ -1,7 +1,7 @@
 import { createFileRoute, Outlet, useMatch, useNavigate } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
 import { useEffect, useState } from "react";
-import { Download, Search } from "lucide-react";
+import { ArrowDown, ArrowUp, Download, Search } from "lucide-react";
 import { fmtDate, rpc, type Member } from "@/lib/sb";
 import { Avatar, Empty, ErrorBox, PageHeader, PlanPill, Skel, StatusPill } from "@/components/admin/bits";
 
@@ -16,6 +16,82 @@ function MembersLayout() {
 }
 
 const PLANS = ["all", "lifetime", "founding", "pro", "free", "suspended", "restricted"];
+
+type SortKey = "founder" | "first" | "last" | "handle" | "age" | "toys" | "scans" | "joined";
+type Sort = { key: SortKey; dir: "asc" | "desc" };
+const SORT_KEY = "ts_admin_members_sort";
+const DEFAULT_SORT: Sort = { key: "founder", dir: "asc" };
+
+const SORT_OPTIONS: { value: string; label: string; key: SortKey; dir: "asc" | "desc" }[] = [
+  { value: "founder:asc", label: "Founder # (1 → N)", key: "founder", dir: "asc" },
+  { value: "founder:desc", label: "Founder # (N → 1)", key: "founder", dir: "desc" },
+  { value: "first:asc", label: "First name (A → Z)", key: "first", dir: "asc" },
+  { value: "last:asc", label: "Last name (A → Z)", key: "last", dir: "asc" },
+  { value: "handle:asc", label: "@handle (A → Z)", key: "handle", dir: "asc" },
+  { value: "age:asc", label: "Age (18+ first)", key: "age", dir: "asc" },
+  { value: "toys:desc", label: "Toys (most first)", key: "toys", dir: "desc" },
+  { value: "scans:desc", label: "Scans today (most first)", key: "scans", dir: "desc" },
+  { value: "joined:desc", label: "Joined (newest first)", key: "joined", dir: "desc" },
+  { value: "joined:asc", label: "Joined (oldest first)", key: "joined", dir: "asc" },
+];
+
+const collator = new Intl.Collator(undefined, { numeric: true, sensitivity: "base" });
+
+function lastWord(name: string) {
+  const parts = name.trim().split(/\s+/);
+  return parts[parts.length - 1] ?? "";
+}
+
+function sortMembers(rows: Member[], sort: Sort): Member[] {
+  const { key, dir } = sort;
+  const mul = dir === "asc" ? 1 : -1;
+  // emptyBottom: true when a missing value must always sink regardless of direction
+  const cmp = (a: Member, b: Member): number => {
+    switch (key) {
+      case "founder": {
+        const an = a.founder_no == null, bn = b.founder_no == null;
+        if (an || bn) return an === bn ? 0 : an ? 1 : -1;
+        return (a.founder_no! - b.founder_no!) * mul;
+      }
+      case "first": {
+        const an = !a.name?.trim(), bn = !b.name?.trim();
+        if (an || bn) return an === bn ? 0 : an ? 1 : -1;
+        return collator.compare(a.name.trim(), b.name.trim()) * mul;
+      }
+      case "last": {
+        const an = !a.name?.trim(), bn = !b.name?.trim();
+        if (an || bn) return an === bn ? 0 : an ? 1 : -1;
+        return collator.compare(lastWord(a.name), lastWord(b.name)) * mul;
+      }
+      case "handle":
+        return collator.compare(a.handle ?? "", b.handle ?? "") * mul;
+      case "age": {
+        const rank = (m: Member) => (m.age_range === "13-17" ? 1 : m.age_range ? 0 : 2);
+        const r = rank(a) - rank(b);
+        if (r !== 0) return r * mul;
+        return collator.compare(a.age_range ?? "", b.age_range ?? "") * mul;
+      }
+      case "toys":
+        return (a.items - b.items) * mul;
+      case "scans":
+        return (a.scans_today - b.scans_today) * mul;
+      case "joined":
+        return collator.compare(a.created_at ?? "", b.created_at ?? "") * mul;
+    }
+  };
+  return [...rows].sort(cmp);
+}
+
+function loadSort(): Sort {
+  try {
+    const raw = localStorage.getItem(SORT_KEY);
+    if (raw) {
+      const p = JSON.parse(raw) as Sort;
+      if (SORT_OPTIONS.some((o) => o.key === p.key && o.dir === p.dir)) return p;
+    }
+  } catch { /* ignore */ }
+  return DEFAULT_SORT;
+}
 
 function toCsv(rows: Member[]) {
   const cols: (keyof Member)[] = ["id", "handle", "name", "email", "provider", "founder_no", "founder_tier", "plan", "pro_until", "age_range", "city", "created_at", "items", "scans_today", "strikes", "restricted_until", "suspended"];
