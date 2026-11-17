@@ -13,6 +13,7 @@ import { Route as IndexRouteImport } from './routes/index'
 import { Route as FeedbackRouteImport } from './routes/feedback'
 import { Route as MembersRouteImport } from './routes/members'
 import { Route as ReportsRouteImport } from './routes/reports'
+import { Route as SupportRouteImport } from './routes/support'
 import { Route as MembersIdRouteImport } from './routes/members.$id'
 
 const IndexRoute = IndexRouteImport.update({
@@ -35,6 +36,11 @@ const ReportsRoute = ReportsRouteImport.update({
   path: '/reports',
   getParentRoute: () => rootRouteImport,
 } as any)
+const SupportRoute = SupportRouteImport.update({
+  id: '/support',
+  path: '/support',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const MembersIdRoute = MembersIdRouteImport.update({
   id: '/$id',
   path: '/$id',
@@ -46,6 +52,7 @@ export interface FileRoutesByFullPath {
   '/feedback': typeof FeedbackRoute
   '/members': typeof MembersRouteWithChildren
   '/reports': typeof ReportsRoute
+  '/support': typeof SupportRoute
   '/members/$id': typeof MembersIdRoute
 }
 export interface FileRoutesByTo {
@@ -53,6 +60,7 @@ export interface FileRoutesByTo {
   '/feedback': typeof FeedbackRoute
   '/members': typeof MembersRouteWithChildren
   '/reports': typeof ReportsRoute
+  '/support': typeof SupportRoute
   '/members/$id': typeof MembersIdRoute
 }
 export interface FileRoutesById {
@@ -61,14 +69,23 @@ export interface FileRoutesById {
   '/feedback': typeof FeedbackRoute
   '/members': typeof MembersRouteWithChildren
   '/reports': typeof ReportsRoute
+  '/support': typeof SupportRoute
   '/members/$id': typeof MembersIdRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/' | '/feedback' | '/members' | '/reports' | '/members/$id'
+  fullPaths:
+    '/' | '/feedback' | '/members' | '/reports' | '/support' | '/members/$id'
   fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/feedback' | '/members' | '/reports' | '/members/$id'
-  id: '__root__' | '/' | '/feedback' | '/members' | '/reports' | '/members/$id'
+  to: '/' | '/feedback' | '/members' | '/reports' | '/support' | '/members/$id'
+  id:
+    | '__root__'
+    | '/'
+    | '/feedback'
+    | '/members'
+    | '/reports'
+    | '/support'
+    | '/members/$id'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -76,6 +93,7 @@ export interface RootRouteChildren {
   FeedbackRoute: typeof FeedbackRoute
   MembersRoute: typeof MembersRouteWithChildren
   ReportsRoute: typeof ReportsRoute
+  SupportRoute: typeof SupportRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -108,6 +126,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ReportsRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/support': {
+      id: '/support'
+      path: '/support'
+      fullPath: '/support'
+      preLoaderRoute: typeof SupportRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/members/$id': {
       id: '/members/$id'
       path: '/$id'
@@ -134,6 +159,7 @@ const rootRouteChildren: RootRouteChildren = {
   FeedbackRoute: FeedbackRoute,
   MembersRoute: MembersRouteWithChildren,
   ReportsRoute: ReportsRoute,
+  SupportRoute: SupportRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)

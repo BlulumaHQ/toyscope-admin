@@ -2,7 +2,7 @@ import { useEffect, useState, type ReactNode } from "react";
 import { Link } from "@tanstack/react-router";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import type { Session } from "@supabase/supabase-js";
-import { LayoutDashboard, Users, Flag, MessageSquare, LogOut } from "lucide-react";
+import { LayoutDashboard, Users, Flag, MessageSquare, MessagesSquare, LogOut } from "lucide-react";
 import { toast } from "sonner";
 import { rpc, sb } from "@/lib/sb";
 
@@ -50,10 +50,12 @@ export function Shell({ children }: { children: ReactNode }) {
 
 function Layout({ email, onSignOut, children }: { email: string; onSignOut: () => void; children: ReactNode }) {
   const ov = useQuery({ queryKey: ["overview"], queryFn: () => rpc<Ov>("admin_overview"), refetchInterval: 60_000 });
+  const sup = useQuery({ queryKey: ["support-unread"], queryFn: () => rpc<number>("admin_support_unread"), refetchInterval: 30_000 });
   const nav = [
     { to: "/" as const, label: "Overview", icon: LayoutDashboard, badge: 0 },
     { to: "/members" as const, label: "Members", icon: Users, badge: 0 },
     { to: "/reports" as const, label: "Reports", icon: Flag, badge: ov.data?.open_reports ?? 0 },
+    { to: "/support" as const, label: "Support", icon: MessagesSquare, badge: sup.data ?? 0 },
     { to: "/feedback" as const, label: "Feedback", icon: MessageSquare, badge: ov.data?.new_feedback ?? 0 },
   ];
   const year = new Date().getFullYear();
