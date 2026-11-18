@@ -81,7 +81,7 @@ function MemberPage() {
         <section className="card p-5">
           <h2 className="font-semibold">Usage</h2>
           <dl className="mt-3 grid grid-cols-2 gap-4 text-sm sm:grid-cols-3">
-            {[["Scans today", `${m.scans_today}/30`], ["Scans this month", q.data.scans_month], ["Toys public", q.data.items_public], ["For sale", q.data.items_sale], ["Marked sensitive", q.data.items_sensitive], ["Total toys", m.items]].map(([k, v]) => (
+            {[["Collection photos", m.photos ?? 0], ["Founder spot", m.founder_no ? (m.founder_confirmed ? "Locked ✓" : "Not locked yet") : "—"], ["Scans today", `${m.scans_today}/30`], ["Scans this month", q.data.scans_month], ["Scans all-time", m.scans_total ?? 0], ["Toys public", q.data.items_public], ["For sale", q.data.items_sale], ["Marked sensitive", q.data.items_sensitive], ["Total toys", m.items]].map(([k, v]) => (
               <div key={k as string}><dt className="text-muted-foreground">{k}</dt><dd className="mt-0.5 text-xl font-bold">{v}</dd></div>
             ))}
           </dl>

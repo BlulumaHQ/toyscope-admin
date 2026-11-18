@@ -27,7 +27,7 @@ export type Member = {
   id: string; handle: string | null; name: string | null; email: string | null; provider: string | null;
   founder_no: number | null; founder_tier: "lifetime" | "founding" | null; plan: "pro" | "free";
   pro_until: string | null; age_range: "13-17" | "18+" | null; city: string | null; created_at: string;
-  items: number; scans_today: number; strikes: number; restricted_until: string | null; suspended: boolean; is_admin: boolean;
+  items: number; photos: number; scans_total: number; founder_confirmed: boolean; scans_today: number; strikes: number; restricted_until: string | null; suspended: boolean; is_admin: boolean;
 };
 
 export const fmtDate = (d?: string | null) =>

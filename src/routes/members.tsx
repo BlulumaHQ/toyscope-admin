@@ -17,7 +17,7 @@ function MembersLayout() {
 
 const PLANS = ["all", "lifetime", "founding", "pro", "free", "suspended", "restricted"];
 
-type SortKey = "founder" | "first" | "last" | "handle" | "age" | "toys" | "scans" | "joined";
+type SortKey = "founder" | "first" | "last" | "handle" | "age" | "toys" | "scans" | "joined" | "photos" | "scanstotal";
 type Sort = { key: SortKey; dir: "asc" | "desc" };
 const SORT_KEY = "ts_admin_members_sort";
 const DEFAULT_SORT: Sort = { key: "founder", dir: "asc" };
@@ -30,6 +30,8 @@ const SORT_OPTIONS: { value: string; label: string; key: SortKey; dir: "asc" | "
   { value: "handle:asc", label: "@handle (A → Z)", key: "handle", dir: "asc" },
   { value: "age:asc", label: "Age (18+ first)", key: "age", dir: "asc" },
   { value: "toys:desc", label: "Toys (most first)", key: "toys", dir: "desc" },
+  { value: "photos:desc", label: "Collection photos (most first)", key: "photos", dir: "desc" },
+  { value: "scanstotal:desc", label: "Scans all-time (most first)", key: "scanstotal", dir: "desc" },
   { value: "scans:desc", label: "Scans today (most first)", key: "scans", dir: "desc" },
   { value: "joined:desc", label: "Joined (newest first)", key: "joined", dir: "desc" },
   { value: "joined:asc", label: "Joined (oldest first)", key: "joined", dir: "asc" },
@@ -75,6 +77,10 @@ function sortMembers(rows: Member[], sort: Sort): Member[] {
         return (a.items - b.items) * mul;
       case "scans":
         return (a.scans_today - b.scans_today) * mul;
+      case "photos":
+        return ((a.photos ?? 0) - (b.photos ?? 0)) * mul;
+      case "scanstotal":
+        return ((a.scans_total ?? 0) - (b.scans_total ?? 0)) * mul;
       case "joined":
         return collator.compare(a.created_at ?? "", b.created_at ?? "") * mul;
     }
@@ -94,7 +100,7 @@ function loadSort(): Sort {
 }
 
 function toCsv(rows: Member[]) {
-  const cols: (keyof Member)[] = ["id", "handle", "name", "email", "provider", "founder_no", "founder_tier", "plan", "pro_until", "age_range", "city", "created_at", "items", "scans_today", "strikes", "restricted_until", "suspended"];
+  const cols: (keyof Member)[] = ["id", "handle", "name", "email", "provider", "founder_no", "founder_tier", "plan", "pro_until", "age_range", "city", "created_at", "items", "photos", "scans_total", "founder_confirmed", "scans_today", "strikes", "restricted_until", "suspended"];
   const esc = (v: unknown) => { const s = v == null ? "" : String(v); return /[",\n]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s; };
   return [cols.join(","), ...rows.map((r) => cols.map((c) => esc(r[c])).join(","))].join("\n");
 }
@@ -157,7 +163,8 @@ function Members() {
                   ["Sign-in", null, null],
                   ["Age", "age", "asc"],
                   ["Toys", "toys", "desc"],
-                  ["Scans today", "scans", "desc"],
+                  ["Photos", "photos", "desc"],
+                  ["Scans (today / all)", "scanstotal", "desc"],
                   ["Joined", "joined", "desc"],
                   ["Status", null, null],
                 ] as [string, SortKey | null, "asc" | "desc" | null][]).map(([h, key, def]) => (
@@ -182,12 +189,13 @@ function Members() {
                   <td className="px-4 py-3"><div className="flex items-center gap-3"><Avatar m={m} /><div className="min-w-0">
                     <div className="font-semibold">{m.name || "—"} <span className="font-normal text-muted-foreground">@{m.handle}</span></div>
                     <div className="truncate text-xs text-muted-foreground"><MaskedEmail email={m.email} /></div></div></div></td>
-                  <td className="px-4 py-3">{m.founder_no ?? "—"}</td>
+                  <td className="px-4 py-3 whitespace-nowrap">{m.founder_no ?? "—"}{m.founder_no ? (m.founder_confirmed ? <span className="ml-1 text-success" title="Spot locked (10 photos)">✓</span> : <span className="ml-1 text-xs text-muted-foreground" title="Not locked yet (needs 10 photos)">·</span>) : null}</td>
                   <td className="px-4 py-3"><PlanPill m={m} /></td>
                   <td className="px-4 py-3 capitalize">{m.provider ?? "—"}</td>
                   <td className="px-4 py-3">{m.age_range === "13-17" ? <span className="pill bg-warning-soft text-warning">Minor</span> : m.age_range ?? "—"}</td>
                   <td className="px-4 py-3">{m.items}</td>
-                  <td className="px-4 py-3">{m.scans_today}<span className="text-muted-foreground">/30</span></td>
+                  <td className="px-4 py-3">{m.photos ?? 0}</td>
+                  <td className="px-4 py-3 whitespace-nowrap">{m.scans_today}<span className="text-muted-foreground"> / {m.scans_total ?? 0}</span></td>
                   <td className="px-4 py-3 whitespace-nowrap">{fmtDate(m.created_at)}</td>
                   <td className="px-4 py-3"><StatusPill m={m} /></td>
                 </tr>
