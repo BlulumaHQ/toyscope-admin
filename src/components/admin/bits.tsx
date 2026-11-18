@@ -72,3 +72,18 @@ export function Confirm({
     </>
   );
 }
+
+/** Email shown masked (s***@gmail.com) until tapped. */
+export function MaskedEmail({ email, className = "" }: { email: string | null | undefined; className?: string }) {
+  const [show, setShow] = useState(false);
+  if (!email) return <span className={className}>—</span>;
+  const [u, d] = email.split("@");
+  const masked = `${(u ?? "").slice(0, 1)}***@${d ?? ""}`;
+  return (
+    <button type="button" className={`text-left underline decoration-dotted underline-offset-2 ${className}`}
+      title={show ? "Hide email" : "Show email"} aria-label={show ? `Email ${email}, tap to hide` : "Email hidden, tap to show"}
+      onClick={(e) => { e.stopPropagation(); e.preventDefault(); setShow((v) => !v); }}>
+      {show ? email : masked}
+    </button>
+  );
+}

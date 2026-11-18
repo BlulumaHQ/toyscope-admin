@@ -2,7 +2,7 @@ import { useEffect, useState, type ReactNode } from "react";
 import { Link } from "@tanstack/react-router";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import type { Session } from "@supabase/supabase-js";
-import { LayoutDashboard, Users, Flag, MessageSquare, MessagesSquare, LogOut } from "lucide-react";
+import { LayoutDashboard, Users, Flag, MessageSquare, MessagesSquare, LogOut, ShieldCheck } from "lucide-react";
 import { toast } from "sonner";
 import { rpc, sb } from "@/lib/sb";
 
@@ -11,12 +11,13 @@ type Ov = { open_reports: number; new_feedback: number };
 export function Shell({ children }: { children: ReactNode }) {
   const [session, setSession] = useState<Session | null | undefined>(undefined);
   const [admin, setAdmin] = useState<boolean | undefined>(undefined);
+  const [aal2, setAal2] = useState<boolean | undefined>(undefined);
   const qc = useQueryClient();
 
   useEffect(() => {
     sb().auth.getSession().then(({ data }) => setSession(data.session));
     const { data } = sb().auth.onAuthStateChange((ev, s) => {
-      if (ev === "SIGNED_IN" || ev === "SIGNED_OUT" || ev === "INITIAL_SESSION") setSession(s);
+      if (ev === "SIGNED_IN" || ev === "SIGNED_OUT" || ev === "INITIAL_SESSION" || ev === "MFA_CHALLENGE_VERIFIED") setSession(s);
     });
     return () => data.subscription.unsubscribe();
   }, []);
@@ -24,12 +25,32 @@ export function Shell({ children }: { children: ReactNode }) {
   useEffect(() => {
     setAdmin(undefined);
     if (!session) return;
-    rpc<boolean>("is_admin").then((v) => setAdmin(!!v)).catch(() => setAdmin(false));
+    rpc<boolean>("am_admin").then((v) => setAdmin(!!v)).catch(() => setAdmin(false));
   }, [session?.user.id]);
 
-  const signOut = async () => { qc.clear(); await sb().auth.signOut(); };
+  // Second factor: admin data only unlocks on an aal2 session.
+  useEffect(() => {
+    setAal2(undefined);
+    if (!session) return;
+    sb().auth.mfa.getAuthenticatorAssuranceLevel().then(({ data }) => setAal2(data?.currentLevel === "aal2"));
+  }, [session?.access_token]);
 
-  if (session === undefined || (session && admin === undefined)) {
+  // Auto sign-out 12 hours after signing in on this device.
+  useEffect(() => {
+    if (!session) return;
+    const KEY = "ts_admin_signed_in_at";
+    const at = Number(localStorage.getItem(KEY) || 0);
+    if (!at) { localStorage.setItem(KEY, String(Date.now())); return; }
+    const left = at + 12 * 3600_000 - Date.now();
+    const out = () => { localStorage.removeItem(KEY); qc.clear(); sb().auth.signOut(); toast("Signed out after 12 hours. Please sign in again."); };
+    if (left <= 0) { out(); return; }
+    const t = setTimeout(out, left);
+    return () => clearTimeout(t);
+  }, [session?.user.id]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  const signOut = async () => { qc.clear(); localStorage.removeItem("ts_admin_signed_in_at"); await sb().auth.signOut(); };
+
+  if (session === undefined || (session && (admin === undefined || aal2 === undefined))) {
     return <div className="grid min-h-screen place-items-center text-sm text-muted-foreground">Loading…</div>;
   }
   if (!session) return <SignIn />;
@@ -45,6 +66,7 @@ export function Shell({ children }: { children: ReactNode }) {
       </div>
     );
   }
+  if (!aal2) return <SecondFactor onDone={() => setAal2(true)} onSignOut={signOut} />;
   return <Layout email={session.user.email ?? ""} onSignOut={signOut}>{children}</Layout>;
 }
 
@@ -139,6 +161,63 @@ function SignIn() {
             <button type="button" className="btn w-full" onClick={() => { setSent(false); setCode(""); }}>Use a different email</button>
           </form>
         )}
+      </div>
+    </div>
+  );
+}
+
+function SecondFactor({ onDone, onSignOut }: { onDone: () => void; onSignOut: () => void }) {
+  const [factorId, setFactorId] = useState<string | null>(null);
+  const [qr, setQr] = useState<string | null>(null);
+  const [secret, setSecret] = useState<string | null>(null);
+  const [code, setCode] = useState("");
+  const [busy, setBusy] = useState(false);
+  const [err, setErr] = useState<string | null>(null);
+
+  useEffect(() => {
+    (async () => {
+      const { data, error } = await sb().auth.mfa.listFactors();
+      if (error) { setErr(error.message); return; }
+      const verified = data.totp.find((f) => f.status === "verified");
+      if (verified) { setFactorId(verified.id); return; }
+      // Clean up half-finished enrolments, then start a fresh one.
+      for (const f of data.all.filter((f) => f.factor_type === "totp" && f.status !== "verified")) await sb().auth.mfa.unenroll({ factorId: f.id });
+      const en = await sb().auth.mfa.enroll({ factorType: "totp", friendlyName: "ToyScope Admin" });
+      if (en.error) { setErr(en.error.message); return; }
+      setFactorId(en.data.id); setQr(en.data.totp.qr_code); setSecret(en.data.totp.secret);
+    })();
+  }, []);
+
+  const verify = async (e: React.FormEvent) => {
+    e.preventDefault(); if (!factorId) return;
+    setBusy(true);
+    const { error } = await sb().auth.mfa.challengeAndVerify({ factorId, code: code.trim() });
+    setBusy(false);
+    if (error) { toast.error(error.message); setCode(""); return; }
+    toast.success("Verified"); onDone();
+  };
+
+  return (
+    <div className="grid min-h-screen place-items-center p-4">
+      <div className="card w-full max-w-sm p-8">
+        <img src="/images/toyscope-logo.svg" alt="ToyScope" className="h-8" />
+        <h1 className="mt-6 flex items-center gap-2 text-xl font-bold"><ShieldCheck className="size-5" />Two-step verification</h1>
+        {err ? <p className="mt-3 text-sm text-destructive">{err}</p> : qr ? (
+          <>
+            <p className="mt-2 text-sm text-muted-foreground">One-time setup: open Google Authenticator (or any authenticator app), tap +, and scan this code.</p>
+            <img src={qr} alt="QR code for your authenticator app" className="mx-auto mt-4 size-48 rounded-lg bg-white p-2" />
+            {secret && <p className="mt-2 break-all text-center font-mono text-xs text-muted-foreground">Can’t scan? Enter: {secret}</p>}
+          </>
+        ) : (
+          <p className="mt-2 text-sm text-muted-foreground">Enter the 6-digit code from your authenticator app.</p>
+        )}
+        <form onSubmit={verify} className="mt-4 space-y-3">
+          <label className="block text-sm font-medium" htmlFor="totp">Authenticator code</label>
+          <input id="totp" inputMode="numeric" autoComplete="one-time-code" pattern="[0-9]{6}" maxLength={6} required autoFocus
+            className="field text-center text-lg tracking-[0.3em]" value={code} onChange={(e) => setCode(e.target.value.replace(/\D/g, "").slice(0, 6))} />
+          <button className="btn btn-primary w-full" disabled={busy || code.length < 6 || !factorId}>{busy ? "Checking…" : "Verify"}</button>
+          <button type="button" className="btn w-full" onClick={onSignOut}>Sign out</button>
+        </form>
       </div>
     </div>
   );

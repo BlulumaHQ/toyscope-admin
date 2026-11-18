@@ -4,7 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
 import { ArrowLeft, Check, RotateCcw, Send } from "lucide-react";
 import { ago, rpc, sb } from "@/lib/sb";
-import { Empty, ErrorBox, PageHeader, Skel } from "@/components/admin/bits";
+import { Empty, ErrorBox, PageHeader, Skel, MaskedEmail } from "@/components/admin/bits";
 
 type Thread = { user_id: string; handle: string | null; email: string | null; status: "open" | "done"; last_at: string; last_sender: "user" | "admin" | null; admin_unread: number; last_body: string | null };
 type Msg = { id: string; user_id: string; sender: "user" | "admin"; body: string; image_path: string | null; meta: Record<string, unknown>; created_at: string };
@@ -105,7 +105,7 @@ function Conversation({ t, onBack }: { t: Thread; onBack: () => void }) {
         <button type="button" className="grid size-11 place-items-center rounded-lg hover:bg-muted lg:hidden" onClick={onBack} aria-label="Back to list"><ArrowLeft className="size-5" /></button>
         <div className="min-w-0 flex-1">
           <div className="truncate font-semibold">@{t.handle ?? "member"}</div>
-          <div className="truncate text-xs text-muted-foreground">{t.email ?? ""}</div>
+          <div className="truncate text-xs text-muted-foreground"><MaskedEmail email={t.email} /></div>
         </div>
         {t.status === "open"
           ? <button type="button" className="btn" onClick={() => setStatus("done")}><Check className="size-4" />Done</button>

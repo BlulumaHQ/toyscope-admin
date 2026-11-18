@@ -4,7 +4,7 @@ import { useState } from "react";
 import { ArrowLeft, Info } from "lucide-react";
 import { toast } from "sonner";
 import { ago, fmtDate, isRestricted, rpc, type Member } from "@/lib/sb";
-import { Confirm, ErrorBox, PlanPill, Skel, StatusPill } from "@/components/admin/bits";
+import { Confirm, ErrorBox, PlanPill, Skel, StatusPill, MaskedEmail } from "@/components/admin/bits";
 
 type Detail = {
   profile: Member; scans_month: number; items_public: number; items_sale: number; items_sensitive: number;
@@ -90,7 +90,7 @@ function MemberPage() {
         <section className="card p-5">
           <h2 className="font-semibold">Account</h2>
           <dl className="mt-3 grid grid-cols-[auto_1fr] gap-x-6 gap-y-2 text-sm">
-            <dt className="text-muted-foreground">Email</dt><dd className="break-all">{m.email ?? "—"}</dd>
+            <dt className="text-muted-foreground">Email</dt><dd className="break-all"><MaskedEmail email={m.email} /></dd>
             <dt className="text-muted-foreground">Sign-in</dt><dd className="capitalize">{m.provider ?? "—"}</dd>
             <dt className="text-muted-foreground">Age range</dt><dd>{m.age_range ?? "—"}</dd>
             <dt className="text-muted-foreground">City</dt><dd>{m.city ?? "—"}</dd>

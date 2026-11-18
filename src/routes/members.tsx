@@ -3,7 +3,7 @@ import { useQuery } from "@tanstack/react-query";
 import { useEffect, useState } from "react";
 import { ArrowDown, ArrowUp, Download, Search } from "lucide-react";
 import { fmtDate, rpc, type Member } from "@/lib/sb";
-import { Avatar, Empty, ErrorBox, PageHeader, PlanPill, Skel, StatusPill } from "@/components/admin/bits";
+import { Avatar, Empty, ErrorBox, PageHeader, PlanPill, Skel, StatusPill, MaskedEmail } from "@/components/admin/bits";
 
 export const Route = createFileRoute("/members")({
   head: () => ({ meta: [{ title: "Members · ToyScope Admin" }, { name: "description", content: "ToyScope members." }, { property: "og:title", content: "Members · ToyScope Admin" }, { property: "og:description", content: "ToyScope members." }] }),
@@ -181,7 +181,7 @@ function Members() {
                   onKeyDown={(e) => e.key === "Enter" && nav({ to: "/members/$id", params: { id: m.id } })}>
                   <td className="px-4 py-3"><div className="flex items-center gap-3"><Avatar m={m} /><div className="min-w-0">
                     <div className="font-semibold">{m.name || "—"} <span className="font-normal text-muted-foreground">@{m.handle}</span></div>
-                    <div className="truncate text-xs text-muted-foreground">{m.email}</div></div></div></td>
+                    <div className="truncate text-xs text-muted-foreground"><MaskedEmail email={m.email} /></div></div></div></td>
                   <td className="px-4 py-3">{m.founder_no ?? "—"}</td>
                   <td className="px-4 py-3"><PlanPill m={m} /></td>
                   <td className="px-4 py-3 capitalize">{m.provider ?? "—"}</td>
